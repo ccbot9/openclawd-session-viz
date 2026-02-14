@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Zap, FileText } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Play, Pause, RotateCcw, Zap, FileText, X } from 'lucide-react';
+
+const API_URL = 'http://localhost:3001';
 
 const CONFIG = {
   contextWindow: 200000,
   reserveTokens: 16384,
   keepRecentTokens: 20000,
   softThresholdTokens: 4000,
-  tokensPerMessage: [500, 1200, 800, 1500, 600, 2000, 900],
-  initialTokens: 100000, // 从 10w tokens 开始
 };
 
 const HARD_THRESHOLD = CONFIG.contextWindow - CONFIG.reserveTokens; // 183616
@@ -19,13 +19,14 @@ interface Message {
   tokens: number;
   timestamp: string;
   compacted: boolean;
-  cumulativeTokens: number; // 添加累计 tokens 字段
+  cumulativeTokens: number;
+  role?: string;
 }
 
 interface LogEntry {
   time: string;
   message: string;
-  type: 'message' | 'flush' | 'compact';
+  type: 'message' | 'flush' | 'compact' | 'info';
 }
 
 interface CompactionVisualizerProps {
@@ -34,7 +35,7 @@ interface CompactionVisualizerProps {
 }
 
 export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisualizerProps) {
-  const [sessionInput, setSessionInput] = useState(sessionPath || '');
+  const [sessionInput, setSessionInput] = useState('');
   const [isStarted, setIsStarted] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -46,6 +47,8 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [flushExecuted, setFlushExecuted] = useState(false);
   const [status, setStatus] = useState('待机');
+  const [loading, setLoading] = useState(false);
+  const [sessionData, setSessionData] = useState<any[]>([]);
 
   const messageIdCounter = useRef(0);
   const isRunningRef = useRef(false);
@@ -53,14 +56,96 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
   const tokensRef = useRef(0);
   const messagesRef = useRef<Message[]>([]);
 
-  const addLog = (message: string, type: 'message' | 'flush' | 'compact' = 'message') => {
+  const addLog = (message: string, type: 'message' | 'flush' | 'compact' | 'info' = 'message') => {
     const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
     setLogs(prev => [{ time, message, type }, ...prev]);
   };
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms / speed));
 
-  const addMessage = (content: string, messageTokens: number) => {
+  // 加载真实的 session 数据
+  const loadSessionData = async (sessionId: string) => {
+    setLoading(true);
+    setStatus('加载中...');
+    addLog(`📂 正在加载 Session: ${sessionId}`, 'info');
+
+    try {
+      const response = await fetch(`${API_URL}/api/sessions/${sessionId}`);
+      if (!response.ok) {
+        throw new Error('Session not found');
+      }
+
+      const data = await response.json();
+      const lines = data.content.split('\n').filter((line: string) => line.trim());
+      const records = lines.map((line: string) => JSON.parse(line));
+
+      addLog(`✅ 成功加载 ${records.length} 条记录`, 'info');
+      setSessionData(records);
+      setIsStarted(true);
+      setLoading(false);
+      setStatus('就绪');
+
+      return records;
+    } catch (error) {
+      addLog(`❌ 加载失败: ${error}`, 'info');
+      setLoading(false);
+      setStatus('加载失败');
+      alert('加载 Session 失败，请检查 Session ID 是否正确');
+      return [];
+    }
+  };
+
+  const handleStart = async () => {
+    const sessionId = sessionInput.trim();
+    if (!sessionId) {
+      alert('请输入 Session ID');
+      return;
+    }
+
+    await loadSessionData(sessionId);
+  };
+
+  const extractTokensFromMessage = (record: any): number => {
+    // 从 message 中提取 tokens
+    if (record.message?.usage) {
+      const usage = record.message.usage;
+      // 计算总 tokens
+      const inputTokens = usage.input || usage.input_tokens || 0;
+      const outputTokens = usage.output || usage.output_tokens || 0;
+      return inputTokens + outputTokens;
+    }
+    return 0;
+  };
+
+  const getMessageContent = (record: any): string => {
+    if (record.type === 'message' && record.message) {
+      const role = record.message.role;
+      const content = record.message.content;
+
+      if (Array.isArray(content)) {
+        // 提取文本内容
+        const textParts = content
+          .filter((c: any) => c.type === 'text')
+          .map((c: any) => c.text)
+          .join(' ');
+        return `[${role}] ${textParts.substring(0, 50)}...`;
+      }
+
+      return `[${role}] ${JSON.stringify(content).substring(0, 50)}...`;
+    }
+
+    if (record.type === 'tool_result') {
+      return `[tool_result] Tool execution`;
+    }
+
+    if (record.type === 'thinking_level_change') {
+      return `[system] Thinking level changed`;
+    }
+
+    return `[${record.type}] ${JSON.stringify(record).substring(0, 50)}...`;
+  };
+
+  const addMessage = (content: string, messageTokens: number, role?: string) => {
     tokensRef.current += messageTokens;
 
     const message: Message = {
@@ -69,14 +154,15 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
       tokens: messageTokens,
       timestamp: new Date().toISOString(),
       compacted: false,
-      cumulativeTokens: tokensRef.current, // 记录累计值
+      cumulativeTokens: tokensRef.current,
+      role,
     };
 
     messagesRef.current = [...messagesRef.current, message];
     setMessages(messagesRef.current);
     setTokens(tokensRef.current);
 
-    addLog(`📨 新消息 #${message.id}：${content.substring(0, 30)}... (+${messageTokens} tokens)`);
+    addLog(`📨 消息 #${message.id}：${content.substring(0, 30)}... (+${messageTokens.toLocaleString()} tokens)`);
   };
 
   const memoryFlush = async () => {
@@ -88,7 +174,7 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
     await sleep(1000);
     addLog('💾 执行静默 agent 回合...', 'flush');
     await sleep(1000);
-    addLog('📝 写入 memory/2026-02-14.md', 'flush');
+    addLog('📝 写入 memory/*.md', 'flush');
     await sleep(1000);
     addLog('✅ Memory Flush 完成（NO_REPLY - 用户看不到）', 'flush');
 
@@ -128,7 +214,7 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
     const compactedCount = messagesRef.current.length - keptCount;
     const compactedTokens = tokensRef.current - keptTokens;
 
-    // Mark old messages as compacted (保持 cumulativeTokens)
+    // Mark old messages as compacted
     const updatedMessages = messagesRef.current.map((msg, i) => ({
       ...msg,
       compacted: i < compactedCount,
@@ -159,98 +245,57 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
     setStatus('运行中');
   };
 
-  const runSimulation = async () => {
+  const runVisualization = async () => {
+    if (sessionData.length === 0) {
+      alert('没有可用的 session 数据');
+      return;
+    }
+
     isRunningRef.current = true;
     setIsRunning(true);
-    setStatus('初始化...');
-
-    // 添加初始消息达到 10w tokens
-    addLog('📚 加载历史对话...');
-    const initialMessageCount = Math.floor(CONFIG.initialTokens / 1000);
-    for (let i = 0; i < initialMessageCount; i++) {
-      const messageTokens = 1000;
-      const message: Message = {
-        id: ++messageIdCounter.current,
-        content: `历史对话 #${i + 1}`,
-        tokens: messageTokens,
-        timestamp: new Date().toISOString(),
-        compacted: false,
-        cumulativeTokens: tokensRef.current + messageTokens,
-      };
-      tokensRef.current += messageTokens;
-      messagesRef.current = [...messagesRef.current, message];
-    }
-    setMessages(messagesRef.current);
-    setTokens(tokensRef.current);
-    addLog(`✅ 已加载 ${initialMessageCount} 条历史消息 (${CONFIG.initialTokens.toLocaleString()} tokens)`);
-
-    await sleep(1000);
     setStatus('运行中');
+    addLog('🚀 开始可视化...', 'info');
 
-    const messageTemplates = [
-      '用户问了一个关于 OpenClaw 的问题',
-      'Assistant 详细解释了 compaction 机制',
-      '执行了浏览器操作工具',
-      '读取了配置文件',
-      '用户请求查看 session 历史',
-      'Assistant 分析了 JSONL 文件结构',
-      '讨论了 Memory Flush 的工作原理',
-      '对比了 Compaction vs Pruning',
-      '创建了可视化文档',
-      '提交并推送到 GitHub',
-    ];
+    for (const record of sessionData) {
+      if (!isRunningRef.current) break;
 
-    let step = 0;
-    while (isRunningRef.current && tokensRef.current < CONFIG.contextWindow) {
-      if (isPausedRef.current) {
+      while (isPausedRef.current) {
         await sleep(100);
-        continue;
       }
 
-      // Check Memory Flush
-      if (!flushExecuted && tokensRef.current >= SOFT_THRESHOLD) {
-        await memoryFlush();
+      const messageTokens = extractTokensFromMessage(record);
+
+      if (messageTokens > 0) {
+        const content = getMessageContent(record);
+        const role = record.message?.role;
+
+        addMessage(content, messageTokens, role);
+
+        // Check Memory Flush
+        if (!flushExecuted && tokensRef.current >= SOFT_THRESHOLD) {
+          await memoryFlush();
+        }
+
+        // Check Compaction
+        if (tokensRef.current >= HARD_THRESHOLD) {
+          await compact();
+        }
+
+        await sleep(300);
       }
-
-      // Check Compaction
-      if (tokensRef.current >= HARD_THRESHOLD) {
-        await compact();
-        continue;
-      }
-
-      // Add new message
-      const template = messageTemplates[step % messageTemplates.length];
-      const messageTokens = CONFIG.tokensPerMessage[Math.floor(Math.random() * CONFIG.tokensPerMessage.length)];
-      addMessage(template, messageTokens);
-
-      step++;
-      await sleep(500);
     }
 
-    if (tokensRef.current >= CONFIG.contextWindow) {
-      addLog('⚠️ 达到上下文窗口限制', 'compact');
-      setStatus('已完成');
+    addLog('✅ 可视化完成', 'info');
+    setStatus('已完成');
 
-      // Auto-close after completion
-      if (onClose) {
-        await sleep(3000);
-        onClose();
-      }
+    // Auto-close after completion
+    if (onClose) {
+      await sleep(3000);
+      onClose();
     }
 
     isRunningRef.current = false;
     setIsRunning(false);
-  };
-
-  const handleStart = () => {
-    if (!sessionInput.trim()) {
-      alert('请输入 Session 路径');
-      return;
-    }
-
-    setIsStarted(true);
-    addLog(`🦉 加载 Session: ${sessionInput}`);
-    addLog('点击"开始演示"查看完整流程');
   };
 
   const handleReset = () => {
@@ -271,6 +316,7 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
     setStatus('待机');
     setIsStarted(false);
     setSessionInput('');
+    setSessionData([]);
   };
 
   const togglePause = () => {
@@ -292,42 +338,49 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
     return (
       <div className="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
         <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-xl p-8 max-w-2xl w-full shadow-2xl">
-          <h1 className="text-4xl font-bold text-white mb-4 text-center">
-            🦉 OpenClaw Compaction 可视化
-          </h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-4xl font-bold text-white">
+              🦉 OpenClaw Compaction 可视化
+            </h1>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            )}
+          </div>
           <p className="text-gray-300 text-center mb-8">
-            基于真实 Session 数据的动态演示
+            基于真实 Session 数据的动态可视化
           </p>
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Session 文件路径
+              Session ID
             </label>
             <input
               type="text"
               value={sessionInput}
               onChange={(e) => setSessionInput(e.target.value)}
-              placeholder="/Users/cc/.openclaw/agents/main/sessions/xxx.jsonl"
+              placeholder="例如: df15e9c3-4a26-4e64-9974-d5260f82979d"
               className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none"
+              disabled={loading}
             />
+            <p className="text-xs text-gray-400 mt-2">
+              💡 输入 Session ID，系统将从 ~/.openclaw/agents/main/sessions/ 读取数据
+            </p>
           </div>
 
           <div className="flex gap-4">
             <button
               onClick={handleStart}
-              className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <FileText size={20} />
-              开始加载
+              {loading ? '加载中...' : '加载 Session'}
             </button>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-              >
-                取消
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -339,20 +392,31 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
       <div className="min-h-screen p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">
-            <h1 className="text-3xl font-bold mb-2">🦉 OpenClaw Compaction 可视化</h1>
-            <p className="text-purple-100">Session: {sessionInput}</p>
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">🦉 OpenClaw Compaction 可视化</h1>
+              <p className="text-purple-100">Session: {sessionInput}</p>
+              <p className="text-sm text-purple-200">共 {sessionData.length} 条记录</p>
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            )}
           </div>
 
           {/* Controls */}
           <div className="flex flex-wrap gap-3 justify-center">
             <button
-              onClick={() => runSimulation()}
+              onClick={runVisualization}
               disabled={isRunning}
               className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Play size={18} />
-              开始演示
+              开始可视化
             </button>
             <button
               onClick={togglePause}
@@ -376,14 +440,6 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
               <Zap size={18} />
               速度: {speed}x
             </button>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-              >
-                关闭
-              </button>
-            )}
           </div>
 
           {/* Status Panel */}
@@ -410,11 +466,11 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
                   硬阈值 (183.6k)
                 </span>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-48 flex items-end gap-1">
+              <div className="absolute bottom-0 left-0 right-0 h-48 flex items-end gap-1 overflow-x-auto">
                 {messages.map((msg, i) => (
                   <div
                     key={msg.id}
-                    className="flex-1 bg-gradient-to-t from-purple-600 to-indigo-600 rounded-t transition-all"
+                    className="flex-shrink-0 w-2 bg-gradient-to-t from-purple-600 to-indigo-600 rounded-t transition-all"
                     style={{
                       height: `${Math.min(100, (msg.cumulativeTokens / CONFIG.contextWindow) * 100)}%`,
                       opacity: msg.compacted ? 0.3 : 1,
@@ -442,6 +498,7 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
                   <span className={
                     log.type === 'flush' ? 'text-orange-400' :
                     log.type === 'compact' ? 'text-red-400' :
+                    log.type === 'info' ? 'text-blue-400' :
                     'text-purple-400'
                   }>
                     {log.message}
@@ -490,7 +547,7 @@ function MessageColumn({ title, messages, isCompacted = false }: { title: string
             ) : (
               <>
                 <div className="text-xs text-gray-400 mb-1">
-                  #{msg.id} · {msg.tokens} tokens
+                  #{msg.id} · {msg.tokens?.toLocaleString()} tokens · {msg.role || 'system'}
                 </div>
                 <div className="text-white">{msg.content}</div>
               </>
