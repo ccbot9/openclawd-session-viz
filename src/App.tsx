@@ -5,7 +5,8 @@ import { SessionList } from './components/SessionList';
 import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
 import { MetadataView } from './components/MetadataView';
-import { FolderOpen, Search, RefreshCw, Upload, ChevronUp, ChevronDown } from 'lucide-react';
+import { CompactionVisualizer } from './components/CompactionVisualizer';
+import { FolderOpen, Search, RefreshCw, Upload, ChevronUp, ChevronDown, Eye } from 'lucide-react';
 
 const API_URL = 'http://localhost:3001';
 
@@ -24,6 +25,7 @@ function App() {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
   const [matchedIndices, setMatchedIndices] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'timeline' | 'metadata'>('timeline');
+  const [showCompactionViz, setShowCompactionViz] = useState(false);
 
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
@@ -292,6 +294,15 @@ function App() {
 
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setShowCompactionViz(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              title="上下文压缩可视化"
+            >
+              <Eye size={18} />
+              <span>Compaction</span>
+            </button>
+
+            <button
               onClick={() => loadSessionsFromAPI(true)}
               disabled={loading}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -480,6 +491,14 @@ function App() {
           <Inspector stats={selectedSession?.stats || null} config={selectedSession?.config || null} />
         </aside>
       </div>
+
+      {/* Compaction Visualizer */}
+      {showCompactionViz && (
+        <CompactionVisualizer
+          sessionPath={selectedSession?.path}
+          onClose={() => setShowCompactionViz(false)}
+        />
+      )}
     </div>
   );
 }
