@@ -66,8 +66,21 @@ function App() {
         try {
           const contentRes = await fetch(`${API_URL}/api/sessions/${sessionInfo.id}`);
           const { content } = await contentRes.json();
+
           // Use full path instead of just filename
           const metadata = createSessionMetadata(sessionInfo.id, sessionInfo.path, content);
+
+          // Try to load config
+          try {
+            const configRes = await fetch(`${API_URL}/api/sessions/${sessionInfo.id}/config`);
+            if (configRes.ok) {
+              const config = await configRes.json();
+              metadata.config = config;
+            }
+          } catch (configErr) {
+            console.warn(`Failed to load config for ${sessionInfo.id}:`, configErr);
+          }
+
           loadedSessions.push(metadata);
         } catch (err) {
           console.error(`Failed to load session ${sessionInfo.id}:`, err);
@@ -104,6 +117,18 @@ function App() {
           const contentRes = await fetch(`${API_URL}/api/sessions/${sessionInfo.id}`);
           const { content } = await contentRes.json();
           const metadata = createSessionMetadata(sessionInfo.id, sessionInfo.path, content);
+
+          // Try to load config
+          try {
+            const configRes = await fetch(`${API_URL}/api/sessions/${sessionInfo.id}/config`);
+            if (configRes.ok) {
+              const config = await configRes.json();
+              metadata.config = config;
+            }
+          } catch (configErr) {
+            console.warn(`Failed to load config for ${sessionInfo.id}:`, configErr);
+          }
+
           newSessions.push(metadata);
         } catch (err) {
           console.error(`Failed to load session ${sessionInfo.id}:`, err);
@@ -299,7 +324,7 @@ function App() {
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-sm font-semibold text-gray-700">Inspector</h2>
           </div>
-          <Inspector stats={selectedSession?.stats || null} />
+          <Inspector stats={selectedSession?.stats || null} config={selectedSession?.config || null} />
         </aside>
       </div>
     </div>

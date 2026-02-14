@@ -80,7 +80,7 @@ export function SessionList({ sessions, selectedId, onSelect, onLoadMore, hasMor
                         {session.stats.totalMessages} msg
                       </div>
                       <div className="text-xs text-gray-400">
-                        {session.stats.toolCalls} tools
+                        {session.stats.toolCalls} toolcalls
                       </div>
                     </div>
                   </div>

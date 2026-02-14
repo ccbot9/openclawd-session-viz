@@ -90,6 +90,7 @@ export interface SessionMetadata {
   modifiedAt: Date;
   records: SessionRecord[];
   stats: SessionStats;
+  config?: SessionConfig;
 }
 
 export interface TimelineItem {
@@ -100,4 +101,42 @@ export interface TimelineItem {
   tokens?: number;
   parentId?: string;
   raw: any;
+}
+
+export interface SkillInfo {
+  name: string;
+  description?: string;
+  filePath?: string;
+  baseDir?: string;
+  source?: string;
+}
+
+export interface ToolInfo {
+  name: string;
+  summaryChars?: number;
+  schemaChars?: number;
+  propertiesCount?: number;
+}
+
+export interface WorkspaceFile {
+  name: string;
+  path: string;
+  missing: boolean;
+  rawChars: number;
+  injectedChars: number;
+  truncated: boolean;
+}
+
+export interface SessionConfig {
+  sessionId: string;
+  model?: string;
+  modelProvider?: string;
+  updatedAt?: number;
+  skills: SkillInfo[];
+  skillCount: number;
+  tools: ToolInfo[];
+  toolCount: number;
+  systemPromptChars?: number;
+  workspaceFiles: WorkspaceFile[];
+  verboseLevel?: string;
 }

@@ -1,14 +1,15 @@
-import type { SessionStats } from '../types/session';
+import type { SessionStats, SessionConfig } from '../types/session';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Clock, MessageCircle, Wrench, Zap } from 'lucide-react';
+import { Clock, MessageCircle, Wrench, Zap, Sparkles, Tool } from 'lucide-react';
 
 interface InspectorProps {
   stats: SessionStats | null;
+  config?: SessionConfig | null;
 }
 
 const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
 
-export function Inspector({ stats }: InspectorProps) {
+export function Inspector({ stats, config }: InspectorProps) {
   if (!stats) {
     return (
       <div className="p-6 text-gray-400 text-sm">
@@ -40,6 +41,94 @@ export function Inspector({ stats }: InspectorProps) {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Session Configuration */}
+      {config && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <Sparkles size={16} />
+            Session Configuration
+          </h3>
+          <div className="space-y-3">
+            {config.model && (
+              <div className="card p-3">
+                <div className="text-xs text-gray-500 mb-1">Model</div>
+                <div className="font-mono text-sm text-gray-900">
+                  {config.model}
+                  {config.modelProvider && (
+                    <span className="ml-2 text-gray-500">({config.modelProvider})</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <StatItem
+              icon={<Sparkles size={14} />}
+              label="Skills"
+              value={config.skillCount.toString()}
+            />
+
+            <StatItem
+              icon={<Tool size={14} />}
+              label="Available Tools"
+              value={config.toolCount.toString()}
+            />
+
+            {config.systemPromptChars && (
+              <StatItem
+                icon={<MessageCircle size={14} />}
+                label="System Prompt"
+                value={`${(config.systemPromptChars / 1000).toFixed(1)}K chars`}
+              />
+            )}
+          </div>
+
+          {/* Tools List */}
+          {config.tools && config.tools.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-xs font-semibold text-gray-600 mb-2">Available Tools ({config.toolCount})</h4>
+              <div className="card p-3 max-h-60 overflow-y-auto scrollbar-thin">
+                <div className="space-y-1">
+                  {config.tools.map((tool, index) => (
+                    <div key={index} className="flex items-center justify-between text-xs py-1 border-b border-gray-100 last:border-0">
+                      <span className="font-mono text-gray-700">{tool.name}</span>
+                      {tool.propertiesCount !== undefined && (
+                        <span className="text-gray-400">{tool.propertiesCount} props</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Skills List */}
+          {config.skills && config.skills.length > 0 && (
+            <details className="mt-4 group">
+              <summary className="text-xs font-semibold text-gray-600 mb-2 cursor-pointer hover:text-gray-800">
+                Skills ({config.skillCount}) - Click to expand
+              </summary>
+              <div className="card p-3 max-h-60 overflow-y-auto scrollbar-thin mt-2">
+                <div className="space-y-2">
+                  {config.skills.map((skill, index) => (
+                    <div key={index} className="text-xs pb-2 border-b border-gray-100 last:border-0">
+                      <div className="font-mono text-gray-700 font-semibold">{skill.name}</div>
+                      {skill.description && (
+                        <div className="text-gray-500 mt-1 line-clamp-2">{skill.description}</div>
+                      )}
+                      {skill.source && (
+                        <div className="text-gray-400 mt-1">
+                          <span className="bg-gray-100 px-1 py-0.5 rounded">{skill.source}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+
       {/* Session Stats */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
