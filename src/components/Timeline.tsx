@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { TimelineItem } from '../types/session';
 import { MessageCard } from './MessageCard';
 
@@ -6,6 +7,15 @@ interface TimelineProps {
 }
 
 export function Timeline({ items }: TimelineProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when items change
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [items]);
+
   if (items.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -25,6 +35,8 @@ export function Timeline({ items }: TimelineProps) {
           <MessageCard item={item} />
         </div>
       ))}
+      {/* Invisible element at the bottom for auto-scroll */}
+      <div ref={bottomRef} />
     </div>
   );
 }
