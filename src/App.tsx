@@ -16,7 +16,6 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionDir, setSessionDir] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
@@ -71,22 +70,12 @@ function App() {
       setError(`Failed to connect to API: ${err.message}. Make sure the API server is running on port 3001.`);
     } finally {
       setLoading(false);
-      setLastRefresh(new Date());
     }
   };
 
   // Auto-load sessions on mount
   useEffect(() => {
     loadSessionsFromAPI();
-  }, []);
-
-  // Auto-refresh every 1 minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadSessionsFromAPI();
-    }, 60000); // 60000ms = 1 minute
-
-    return () => clearInterval(interval);
   }, []);
 
   // Handle manual file upload
@@ -148,14 +137,7 @@ function App() {
             <h1 className="text-2xl font-bold text-gray-900">OpenClaw Session Visualizer</h1>
             <p className="text-sm text-gray-500 mt-1">
               {sessionDir ? (
-                <>
-                  <span>📂 <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">{sessionDir}</code></span>
-                  {lastRefresh && (
-                    <span className="ml-3 text-xs text-gray-400">
-                      🔄 Last refresh: {lastRefresh.toLocaleTimeString()} (auto-refresh every 1 min)
-                    </span>
-                  )}
-                </>
+                <span>📂 <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">{sessionDir}</code></span>
               ) : (
                 'Loading session directory...'
               )}
