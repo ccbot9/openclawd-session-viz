@@ -142,54 +142,54 @@ export function buildTimeline(records: SessionRecord[]): TimelineItem[] {
         parentId: record.result.tool_use_id,
         raw: record._raw,
       });
+    } else if (record.type === 'custom') {
+      // Custom events (e.g., cache-ttl)
+      items.push({
+        id: record.id,
+        type: 'custom',
+        timestamp: new Date(record.timestamp),
+        content: {
+          customType: (record as any).customType,
+          data: (record as any).data,
+        },
+        parentId: record.parentId,
+        raw: record._raw,
+      });
+    } else if (record.type === 'thinking_level_change') {
+      // Thinking level change
+      items.push({
+        id: record.id,
+        type: 'thinkingLevelChange',
+        timestamp: new Date(record.timestamp),
+        content: {
+          thinkingLevel: (record as any).thinkingLevel,
+        },
+        parentId: record.parentId,
+        raw: record._raw,
+      });
+    } else if (record.type === 'model_change') {
+      // Model change
+      items.push({
+        id: record.id,
+        type: 'modelChange',
+        timestamp: new Date(record.timestamp),
+        content: {
+          modelId: (record as any).modelId,
+          provider: (record as any).provider,
+        },
+        parentId: record.parentId,
+        raw: record._raw,
+      });
+    } else if (record.type === 'session') {
+      // Session start
+      items.push({
+        id: record.id,
+        type: 'sessionStart',
+        timestamp: new Date(record.timestamp),
+        content: record,
+        raw: record._raw,
+      });
     }
-  } else if (record.type === 'custom') {
-    // Custom events (e.g., cache-ttl)
-    items.push({
-      id: record.id,
-      type: 'custom',
-      timestamp: new Date(record.timestamp),
-      content: {
-        customType: (record as any).customType,
-        data: (record as any).data,
-      },
-      parentId: record.parentId,
-      raw: record._raw,
-    });
-  } else if (record.type === 'thinking_level_change') {
-    // Thinking level change
-    items.push({
-      id: record.id,
-      type: 'thinkingLevelChange',
-      timestamp: new Date(record.timestamp),
-      content: {
-        thinkingLevel: (record as any).thinkingLevel,
-      },
-      parentId: record.parentId,
-      raw: record._raw,
-    });
-  } else if (record.type === 'model_change') {
-    // Model change
-    items.push({
-      id: record.id,
-      type: 'modelChange',
-      timestamp: new Date(record.timestamp),
-      content: {
-        modelId: (record as any).modelId,
-        provider: (record as any).provider,
-      },
-      parentId: record.parentId,
-      raw: record._raw,
-    });
-  } else if (record.type === 'session') {
-    // Session start
-    items.push({
-      id: record.id,
-      type: 'sessionStart',
-      timestamp: new Date(record.timestamp),
-      content: record,
-      raw: record._raw,
-    });
   }
 
   return items;
