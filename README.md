@@ -1,124 +1,198 @@
 # OpenClaw Session Visualizer
 
-一个用于可视化和分析 OpenClaw session 的现代化 Web 应用。
+[中文](./README.zh-CN.md) | English
 
-## ✨ 功能特性
+A modern web application for visualizing and analyzing OpenClaw AI agent sessions with interactive timelines, thinking processes, and comprehensive statistics.
 
-- 🚀 **自动加载** - 启动时自动从本地 OpenClaw session 目录加载最近的 sessions
-- 📊 **Session Timeline** - 时间线展示用户消息、thinking、工具调用和结果
-- 🔍 **搜索过滤** - 快速搜索时间线中的内容
-- 📈 **统计分析** - Token 使用、工具调用统计、饼图可视化
-- 🔬 **JSON 查看器** - 每条消息都可以查看原始 JSON
-- 🎨 **美观的 UI** - 现代化的三栏布局，颜色编码的消息类型
+![OpenClaw Session Visualizer](https://img.shields.io/badge/OpenClaw-Session%20Visualizer-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
+![React](https://img.shields.io/badge/React-19-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## 🚀 快速开始
+## ✨ Features
 
-### 方法一：自动加载（推荐）
+- 🚀 **Auto-load Sessions** - Automatically loads recent sessions from local OpenClaw directory on startup
+- 📊 **Interactive Timeline** - Visualize user messages, thinking processes, tool calls, and results
+- 🔍 **Search & Filter** - Quickly search through timeline content
+- 📈 **Statistics Dashboard** - Token usage analytics, tool call statistics, and pie charts
+- 🔬 **Raw JSON Viewer** - Inspect original JSON data for every message
+- 🎨 **Modern UI** - Three-panel layout with color-coded message types
+- 🎯 **Nested Cards** - Assistant messages aggregate thinking, text, and tool calls in a single card
 
-1. **启动 API 服务器** （新终端窗口）
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- OpenClaw installed locally
+
+### Installation
+
 ```bash
-cd /Users/cc/openclawd-session-viz
+# Clone the repository
+git clone https://github.com/ccbot9/openclawd-session-viz.git
+cd openclawd-session-viz
+
+# Install dependencies
+npm install
+```
+
+### Method 1: Auto-load (Recommended)
+
+**One-line start (API + Frontend):**
+```bash
+npm start
+```
+
+Or run them separately:
+
+**Terminal 1 - Start API Server:**
+```bash
 npm run api
 ```
 
-2. **启动前端** （另一个终端窗口）
+**Terminal 2 - Start Frontend:**
 ```bash
 npm run dev
 ```
 
-3. **访问应用**：http://localhost:5173/
-   - 应用会自动从 `~/.openclaw/agents/main/sessions/` 加载最近的 10 个 sessions
-   - 页面顶部会显示当前的 session 目录路径
-   - 点击 "Reload" 按钮刷新 session 列表
+**Access the app:** http://localhost:5173/
 
-### 方法二：手动上传
+The application will automatically:
+- Load the latest 10 sessions from `~/.openclaw/agents/main/sessions/`
+- Display the session directory path at the top
+- Allow you to reload sessions with the "Reload" button
 
-1. 启动前端（只需要前端）
-```bash
-npm run dev
+### Method 2: Manual Upload
+
+1. **Start frontend only:**
+   ```bash
+   npm run dev
+   ```
+
+2. Click the "Upload" button in the top-right corner
+3. Select one or more `.jsonl` files
+
+## 📖 Usage Guide
+
+### Interface Layout
+
+- **Left Sidebar**: Browse all loaded sessions, grouped by date
+- **Center Panel**: Interactive timeline view with search functionality
+- **Right Sidebar**: Statistics and tool usage analytics
+
+### Viewing Raw JSON
+
+Every message card has a "Raw JSON" button at the bottom. Click to expand and view the original JSON data. You can also copy the JSON with one click.
+
+### Search Functionality
+
+Use the search bar at the top of the timeline to filter messages by:
+- Message content
+- Tool names
+- Message types
+
+### Message Types
+
+Different message types are color-coded:
+- 🔵 **User** - User messages (blue)
+- 🟣 **Thinking** - Agent thinking process (purple, expandable)
+- 🟠 **Tool Call** - Tool invocations (orange, nested cards)
+- 🟢 **Tool Result** - Tool execution results (green)
+- ⚫ **Assistant** - Agent responses (gray)
+
+### Nested Card Design
+
+Assistant messages use a nested card structure:
+```
+┌─────────────────────────────────────────┐
+│ 🤖 Assistant Message                   │
+├─────────────────────────────────────────┤
+│ 🧠 Thinking (click to expand) ▼         │
+│                                         │
+│ 📝 Response text content...             │
+│                                         │
+│   ┌───────────────────────────────┐   │
+│   │ 🔧 Tool Call: exec             │   │
+│   │ { command: "..." }             │   │
+│   └───────────────────────────────┘   │
+│                                         │
+│ 📄 Raw JSON ▶                           │
+└─────────────────────────────────────────┘
 ```
 
-2. 点击右上角的 "Upload" 按钮
-3. 选择一个或多个 `.jsonl` 文件
+## 🛠 Tech Stack
 
-### 3. 探索 Session
+- **Frontend Framework**: React 19 + TypeScript 5.9
+- **Build Tool**: Vite 7.3
+- **Styling**: Tailwind CSS 3.4
+- **Charts**: Recharts 3.7
+- **Icons**: Lucide React
+- **Date Handling**: date-fns 4.1
+- **Backend API**: Express 5.2
 
-- **左侧边栏**：浏览所有加载的 sessions
-- **中间区域**：查看时间线，点击查看详情
-- **右侧边栏**：查看统计信息和工具使用分析
-
-## 📖 使用说明
-
-### 查看原始 JSON
-
-每个消息卡片底部都有 "Raw JSON" 按钮，点击展开即可查看原始 JSON 数据。
-
-### 搜索功能
-
-使用顶部搜索框可以过滤时间线中的消息，支持搜索：
-- 消息内容
-- 工具名称
-- 消息类型
-
-### 消息类型
-
-不同类型的消息使用不同颜色标识：
-- 🔵 User - 用户消息
-- 🟣 Thinking - Agent 思考过程
-- 🟠 Tool Call - 工具调用
-- 🟢 Tool Result - 工具结果
-- ⚫ Assistant - Agent 回复
-
-## 🛠 技术栈
-
-- **React 18** + **TypeScript**
-- **Vite** - 快速的构建工具
-- **Tailwind CSS** - 实用优先的 CSS 框架
-- **Recharts** - 图表库
-- **Lucide React** - 图标库
-- **date-fns** - 日期处理
-
-## 📂 项目结构
+## 📂 Project Structure
 
 ```
 src/
 ├── components/
-│   ├── JsonViewer.tsx      # JSON 查看器
-│   ├── MessageCard.tsx     # 消息卡片
-│   ├── Timeline.tsx        # 时间线视图
-│   ├── Inspector.tsx       # 统计面板
-│   └── SessionList.tsx     # Session 列表
+│   ├── JsonViewer.tsx      # Raw JSON viewer with copy functionality
+│   ├── MessageCard.tsx     # Message card with nested design
+│   ├── Timeline.tsx        # Timeline view component
+│   ├── Inspector.tsx       # Statistics panel
+│   └── SessionList.tsx     # Session list with grouping
 ├── types/
-│   └── session.ts          # TypeScript 类型定义
+│   └── session.ts          # TypeScript type definitions
 ├── utils/
-│   └── sessionParser.ts    # JSONL 解析器
-├── App.tsx                 # 主应用
-└── main.tsx                # 入口文件
+│   └── sessionParser.ts    # JSONL parser and aggregator
+├── App.tsx                 # Main application
+└── main.tsx                # Entry point
+
+server.js                   # Express API server for local file access
 ```
 
-## 🎯 下一步
+## 🔌 API Endpoints
 
-可以添加的功能：
-- [ ] Session 对比模式
-- [ ] 导出分析报告
-- [ ] 工具调用链可视化
-- [ ] Token 使用趋势图
-- [ ] 自动从目录加载 sessions
-- [ ] 保存过滤条件
+The API server (port 3001) provides:
 
-## 📝 示例
+- `GET /api/info` - Get session directory information
+- `GET /api/sessions` - List all available sessions
+- `GET /api/sessions/:id` - Fetch specific session content
 
-获取示例 session 文件：
+## 🎯 Roadmap
 
+Future enhancements:
+- [ ] Session comparison mode
+- [ ] Export analysis reports
+- [ ] Tool call chain visualization
+- [ ] Token usage trends over time
+- [ ] Save filter preferences
+- [ ] Multi-session analysis
+
+## 📝 Examples
+
+List recent sessions:
 ```bash
-# 列出最近的 sessions
 ls -lht ~/.openclaw/agents/main/sessions/*.jsonl | head -5
-
-# 复制一个 session 到当前目录
-cp ~/.openclaw/agents/main/sessions/<session-id>.jsonl ./
 ```
 
-然后在应用中加载该文件。
+Copy a session for analysis:
+```bash
+cp ~/.openclaw/agents/main/sessions/<session-id>.jsonl ./examples/
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+MIT License - feel free to use this project for your own purposes.
+
+## 🙏 Acknowledgments
+
+Built with assistance from Claude Sonnet 4.5 for analyzing and understanding OpenClaw AI agent execution patterns.
 
 ---
 
