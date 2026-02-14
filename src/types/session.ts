@@ -26,8 +26,22 @@ export interface ToolCallContent {
 export type MessageContent = TextContent | ThinkingContent | ToolCallContent;
 
 export interface TokenUsage {
-  input_tokens: number;
-  output_tokens: number;
+  // Old format (Anthropic API)
+  input_tokens?: number;
+  output_tokens?: number;
+  // New format (OpenClaw)
+  input?: number;
+  output?: number;
+  cacheRead?: number;
+  cacheWrite?: number;
+  totalTokens?: number;
+  cost?: {
+    input?: number;
+    output?: number;
+    cacheRead?: number;
+    cacheWrite?: number;
+    total?: number;
+  };
 }
 
 export interface Message {

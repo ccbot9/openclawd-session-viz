@@ -30,9 +30,14 @@ export function calculateStats(records: SessionRecord[]): SessionStats {
     if (record.type === 'message' && record.message) {
       const usage = record.message.usage;
       if (usage) {
-        inputTokens += usage.input_tokens || 0;
-        outputTokens += usage.output_tokens || 0;
-        totalTokens += (usage.input_tokens || 0) + (usage.output_tokens || 0);
+        // Support both formats: input/output and input_tokens/output_tokens
+        const inputCount = usage.input || usage.input_tokens || 0;
+        const outputCount = usage.output || usage.output_tokens || 0;
+        const total = usage.totalTokens || (inputCount + outputCount);
+
+        inputTokens += inputCount;
+        outputTokens += outputCount;
+        totalTokens += total;
       }
 
       // Count tool calls
@@ -87,12 +92,24 @@ export function buildTimeline(records: SessionRecord[]): TimelineItem[] {
         });
       } else if (role === 'assistant') {
         // Assistant message - aggregate all content into one item
+        // Calculate total tokens (support both formats)
+        let totalTokensForMessage: number | undefined;
+        if (usage) {
+          if (usage.totalTokens) {
+            totalTokensForMessage = usage.totalTokens;
+          } else {
+            const inputCount = usage.input || usage.input_tokens || 0;
+            const outputCount = usage.output || usage.output_tokens || 0;
+            totalTokensForMessage = inputCount + outputCount;
+          }
+        }
+
         items.push({
           id: record.id,
           type: 'assistant',
           timestamp,
           content: content, // Keep all content (thinking, text, toolCalls)
-          tokens: usage ? usage.input_tokens + usage.output_tokens : undefined,
+          tokens: totalTokensForMessage,
           raw: record._raw,
         });
       }

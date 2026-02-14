@@ -156,7 +156,7 @@ export function MessageCard({ item }: MessageCardProps) {
                           <ReactDiffViewer
                             oldValue={args.old_string || args.oldText || ''}
                             newValue={args.new_string || args.newText || ''}
-                            splitView={false}
+                            splitView={true}
                             showDiffOnly={false}
                             useDarkTheme={false}
                             styles={{
