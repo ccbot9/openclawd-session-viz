@@ -13,6 +13,7 @@ function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionDir, setSessionDir] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -252,6 +253,21 @@ function App() {
     });
   };
 
+  // Trigger search
+  const executeSearch = () => {
+    setSearchQuery(searchInput.trim());
+  };
+
+  // Handle Enter key in search input
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      executeSearch();
+    } else if (e.key === 'Escape') {
+      setSearchInput('');
+      setSearchQuery('');
+    }
+  };
+
   const filteredItems = timelineItems;
 
   return (
@@ -335,29 +351,49 @@ function App() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
                       type="text"
-                      placeholder="Search in timeline..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Search in timeline... (Press Enter to search)"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
+                      className="w-full pl-10 pr-24 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    {searchInput && (
+                      <button
+                        onClick={() => {
+                          setSearchInput('');
+                          setSearchQuery('');
+                        }}
+                        className="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        title="Clear (Esc)"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
 
+                  <button
+                    onClick={executeSearch}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  >
+                    Search
+                  </button>
+
                   {matchedIndices.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">
+                    <div className="flex items-center gap-2 border-l border-gray-300 pl-3">
+                      <span className="text-sm text-gray-600 whitespace-nowrap">
                         {currentMatchIndex + 1} / {matchedIndices.length}
                       </span>
                       <button
                         onClick={goToPrevMatch}
                         className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        title="Previous match (Shift+Enter)"
+                        title="Previous match"
                       >
                         <ChevronUp size={16} />
                       </button>
                       <button
                         onClick={goToNextMatch}
                         className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        title="Next match (Enter)"
+                        title="Next match"
                       >
                         <ChevronDown size={16} />
                       </button>
