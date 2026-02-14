@@ -3,6 +3,7 @@ import { JsonViewer } from './JsonViewer';
 import { User, Brain, Wrench, CheckCircle, MessageSquare, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
+import ReactDiffViewer from 'react-diff-viewer-continued';
 
 interface MessageCardProps {
   item: TimelineItem;
@@ -105,8 +106,11 @@ export function MessageCard({ item }: MessageCardProps) {
             <div className="space-y-2">
               {toolCallItems.map((toolCall: any, idx: number) => {
                 const args = toolCall.arguments || toolCall.input || {};
-                const isWriteTool = toolCall.name.toLowerCase() === 'write';
+                const toolName = toolCall.name.toLowerCase();
+                const isWriteTool = toolName === 'write';
+                const isEditTool = toolName === 'edit';
                 const hasContent = args.content || args.file_content;
+                const hasEdit = args.old_string || args.oldText;
 
                 return (
                   <div
@@ -120,26 +124,55 @@ export function MessageCard({ item }: MessageCardProps) {
                       </span>
                     </div>
 
-                    {/* Tool arguments */}
+                    {/* Write tool - Render as Markdown */}
                     {isWriteTool && hasContent ? (
                       <div className="space-y-2">
                         {/* Show file path */}
-                        {args.file_path && (
+                        {(args.file_path || args.path) && (
                           <div className="text-xs text-gray-600">
                             <span className="font-semibold">Path:</span>{' '}
-                            <code className="bg-white px-1 py-0.5 rounded">{args.file_path}</code>
-                          </div>
-                        )}
-                        {args.path && (
-                          <div className="text-xs text-gray-600">
-                            <span className="font-semibold">Path:</span>{' '}
-                            <code className="bg-white px-1 py-0.5 rounded">{args.path}</code>
+                            <code className="bg-white px-1 py-0.5 rounded">{args.file_path || args.path}</code>
                           </div>
                         )}
 
                         {/* Render content as Markdown */}
                         <div className="bg-white p-3 rounded border border-orange-200 prose prose-sm max-w-none">
                           <ReactMarkdown>{args.content || args.file_content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : isEditTool && hasEdit ? (
+                      /* Edit tool - Show diff */
+                      <div className="space-y-2">
+                        {/* Show file path */}
+                        {(args.file_path || args.path) && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-semibold">Path:</span>{' '}
+                            <code className="bg-white px-1 py-0.5 rounded">{args.file_path || args.path}</code>
+                          </div>
+                        )}
+
+                        {/* Show diff */}
+                        <div className="bg-white rounded border border-orange-200 overflow-hidden">
+                          <ReactDiffViewer
+                            oldValue={args.old_string || args.oldText || ''}
+                            newValue={args.new_string || args.newText || ''}
+                            splitView={false}
+                            showDiffOnly={false}
+                            useDarkTheme={false}
+                            styles={{
+                              variables: {
+                                light: {
+                                  diffViewerBackground: '#ffffff',
+                                  addedBackground: '#e6ffec',
+                                  addedColor: '#24292e',
+                                  removedBackground: '#ffebe9',
+                                  removedColor: '#24292e',
+                                  wordAddedBackground: '#acf2bd',
+                                  wordRemovedBackground: '#fdb8c0',
+                                },
+                              },
+                            }}
+                          />
                         </div>
                       </div>
                     ) : (
