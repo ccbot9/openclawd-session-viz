@@ -62,7 +62,7 @@ export interface ToolResult {
 }
 
 export interface SessionRecord {
-  type: 'message' | 'tool_result';
+  type: 'message' | 'tool_result' | 'custom' | 'thinking_level_change' | 'model_change' | 'session';
   id: string;
   parentId?: string;
   timestamp: string;

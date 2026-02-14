@@ -1,6 +1,6 @@
 import type { SessionStats, SessionConfig } from '../types/session';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Clock, MessageCircle, Wrench, Zap, Sparkles, Tool } from 'lucide-react';
+import { Clock, MessageCircle, Wrench, Zap, Sparkles, Settings } from 'lucide-react';
 
 interface InspectorProps {
   stats: SessionStats | null;
@@ -68,7 +68,7 @@ export function Inspector({ stats, config }: InspectorProps) {
             />
 
             <StatItem
-              icon={<Tool size={14} />}
+              icon={<Settings size={14} />}
               label="Available Tools"
               value={config.toolCount.toString()}
             />
