@@ -53,7 +53,8 @@ function App() {
         try {
           const contentRes = await fetch(`${API_URL}/api/sessions/${sessionInfo.id}`);
           const { content } = await contentRes.json();
-          const metadata = createSessionMetadata(sessionInfo.id, sessionInfo.filename, content);
+          // Use full path instead of just filename
+          const metadata = createSessionMetadata(sessionInfo.id, sessionInfo.path, content);
           loadedSessions.push(metadata);
         } catch (err) {
           console.error(`Failed to load session ${sessionInfo.id}:`, err);
