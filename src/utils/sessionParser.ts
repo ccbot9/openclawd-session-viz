@@ -122,12 +122,14 @@ export function createSessionMetadata(
 
   const timestamps = records.map(r => new Date(r.timestamp)).filter(d => !isNaN(d.getTime()));
   const createdAt = timestamps.length > 0 ? new Date(Math.min(...timestamps.map(d => d.getTime()))) : new Date();
+  const modifiedAt = timestamps.length > 0 ? new Date(Math.max(...timestamps.map(d => d.getTime()))) : new Date();
 
   return {
     id,
     path,
     name: id.slice(0, 8),
     createdAt,
+    modifiedAt,
     records,
     stats,
   };

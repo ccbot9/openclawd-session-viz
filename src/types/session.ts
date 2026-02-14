@@ -73,6 +73,7 @@ export interface SessionMetadata {
   path: string;
   name: string;
   createdAt: Date;
+  modifiedAt: Date;
   records: SessionRecord[];
   stats: SessionStats;
 }

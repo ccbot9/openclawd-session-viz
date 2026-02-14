@@ -2,6 +2,7 @@ import type { TimelineItem } from '../types/session';
 import { JsonViewer } from './JsonViewer';
 import { User, Brain, Wrench, CheckCircle, MessageSquare, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
 
 interface MessageCardProps {
   item: TimelineItem;
@@ -102,28 +103,56 @@ export function MessageCard({ item }: MessageCardProps) {
           {/* Tool Calls - nested cards */}
           {toolCallItems.length > 0 && (
             <div className="space-y-2">
-              {toolCallItems.map((toolCall: any, idx: number) => (
-                <div
-                  key={`tool-${idx}`}
-                  className="ml-4 p-3 border-l-4 border-l-tool bg-orange-50 rounded"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wrench size={14} className="text-tool" />
-                    <span className="font-mono text-sm font-semibold text-orange-900">
-                      {toolCall.name}
-                    </span>
-                  </div>
+              {toolCallItems.map((toolCall: any, idx: number) => {
+                const args = toolCall.arguments || toolCall.input || {};
+                const isWriteTool = toolCall.name.toLowerCase() === 'write';
+                const hasContent = args.content || args.file_content;
 
-                  {/* Tool arguments */}
-                  {(toolCall.arguments || toolCall.input) && (
-                    <div className="bg-white p-2 rounded border border-orange-200">
-                      <pre className="text-xs text-gray-700 overflow-x-auto">
-                        {JSON.stringify(toolCall.arguments || toolCall.input, null, 2)}
-                      </pre>
+                return (
+                  <div
+                    key={`tool-${idx}`}
+                    className="ml-4 p-3 border-l-4 border-l-tool bg-orange-50 rounded"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Wrench size={14} className="text-tool" />
+                      <span className="font-mono text-sm font-semibold text-orange-900">
+                        {toolCall.name}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Tool arguments */}
+                    {isWriteTool && hasContent ? (
+                      <div className="space-y-2">
+                        {/* Show file path */}
+                        {args.file_path && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-semibold">Path:</span>{' '}
+                            <code className="bg-white px-1 py-0.5 rounded">{args.file_path}</code>
+                          </div>
+                        )}
+                        {args.path && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-semibold">Path:</span>{' '}
+                            <code className="bg-white px-1 py-0.5 rounded">{args.path}</code>
+                          </div>
+                        )}
+
+                        {/* Render content as Markdown */}
+                        <div className="bg-white p-3 rounded border border-orange-200 prose prose-sm max-w-none">
+                          <ReactMarkdown>{args.content || args.file_content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Regular JSON display for other tools */
+                      <div className="bg-white p-2 rounded border border-orange-200">
+                        <pre className="text-xs text-gray-700 overflow-x-auto">
+                          {JSON.stringify(args, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

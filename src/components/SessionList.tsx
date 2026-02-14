@@ -9,9 +9,9 @@ interface SessionListProps {
 }
 
 export function SessionList({ sessions, selectedId, onSelect }: SessionListProps) {
-  // Group sessions by date
+  // Group sessions by date (using modifiedAt instead of createdAt)
   const groupedSessions = sessions.reduce((acc, session) => {
-    const dateKey = format(session.createdAt, 'yyyy-MM-dd');
+    const dateKey = format(session.modifiedAt, 'yyyy-MM-dd');
     if (!acc[dateKey]) {
       acc[dateKey] = [];
     }
@@ -68,7 +68,7 @@ export function SessionList({ sessions, selectedId, onSelect }: SessionListProps
                       {session.name}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
-                      {formatDistanceToNow(session.createdAt, { addSuffix: true })}
+                      {formatDistanceToNow(session.modifiedAt, { addSuffix: true })}
                     </div>
                   </div>
                   <div className="text-right">
