@@ -1,6 +1,7 @@
 import type { SessionStats, SessionConfig } from '../types/session';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Clock, MessageCircle, Wrench, Zap, Sparkles, Settings } from 'lucide-react';
+import { Clock, MessageCircle, Wrench, Zap, Sparkles, Settings, ChevronRight } from 'lucide-react';
+import { groupTools } from '../utils/toolGroups';
 
 interface InspectorProps {
   stats: SessionStats | null;
@@ -82,24 +83,43 @@ export function Inspector({ stats, config }: InspectorProps) {
             )}
           </div>
 
-          {/* Tools List */}
-          {config.tools && config.tools.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-xs font-semibold text-gray-600 mb-2">Available Tools ({config.toolCount})</h4>
-              <div className="card p-3 max-h-60 overflow-y-auto scrollbar-thin">
-                <div className="space-y-1">
-                  {config.tools.map((tool, index) => (
-                    <div key={index} className="flex items-center justify-between text-xs py-1 border-b border-gray-100 last:border-0">
-                      <span className="font-mono text-gray-700">{tool.name}</span>
-                      {tool.propertiesCount !== undefined && (
-                        <span className="text-gray-400">{tool.propertiesCount} props</span>
-                      )}
-                    </div>
+          {/* Tools List - Grouped */}
+          {config.tools && config.tools.length > 0 && (() => {
+            const toolGroups = groupTools(config.tools.map(t => t.name));
+            return (
+              <div className="mt-4">
+                <h4 className="text-xs font-semibold text-gray-600 mb-2">
+                  Available Tools ({config.toolCount})
+                </h4>
+                <div className="card p-3 space-y-2 max-h-60 overflow-y-auto scrollbar-thin">
+                  {toolGroups.map((group) => (
+                    <details key={group.name} className="group/tool">
+                      <summary className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight size={12} className="text-gray-400 transition-transform group-open/tool:rotate-90" />
+                          <span className="text-xs font-semibold text-gray-700">{group.displayName}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{group.count} tools</span>
+                      </summary>
+                      <div className="ml-5 mt-1 space-y-1">
+                        {group.tools.map((toolName) => {
+                          const toolInfo = config.tools.find(t => t.name === toolName);
+                          return (
+                            <div key={toolName} className="flex items-center justify-between text-xs py-1 px-2 hover:bg-gray-50 rounded">
+                              <span className="font-mono text-gray-600">{toolName}</span>
+                              {toolInfo?.propertiesCount !== undefined && (
+                                <span className="text-gray-400">{toolInfo.propertiesCount} props</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Skills List */}
           {config.skills && config.skills.length > 0 && (
