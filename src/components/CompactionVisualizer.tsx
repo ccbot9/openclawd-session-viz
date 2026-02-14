@@ -7,6 +7,7 @@ const CONFIG = {
   keepRecentTokens: 20000,
   softThresholdTokens: 4000,
   tokensPerMessage: [500, 1200, 800, 1500, 600, 2000, 900],
+  initialTokens: 100000, // 从 10w tokens 开始
 };
 
 const HARD_THRESHOLD = CONFIG.contextWindow - CONFIG.reserveTokens; // 183616
@@ -161,6 +162,29 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
   const runSimulation = async () => {
     isRunningRef.current = true;
     setIsRunning(true);
+    setStatus('初始化...');
+
+    // 添加初始消息达到 10w tokens
+    addLog('📚 加载历史对话...');
+    const initialMessageCount = Math.floor(CONFIG.initialTokens / 1000);
+    for (let i = 0; i < initialMessageCount; i++) {
+      const messageTokens = 1000;
+      const message: Message = {
+        id: ++messageIdCounter.current,
+        content: `历史对话 #${i + 1}`,
+        tokens: messageTokens,
+        timestamp: new Date().toISOString(),
+        compacted: false,
+        cumulativeTokens: tokensRef.current + messageTokens,
+      };
+      tokensRef.current += messageTokens;
+      messagesRef.current = [...messagesRef.current, message];
+    }
+    setMessages(messagesRef.current);
+    setTokens(tokensRef.current);
+    addLog(`✅ 已加载 ${initialMessageCount} 条历史消息 (${CONFIG.initialTokens.toLocaleString()} tokens)`);
+
+    await sleep(1000);
     setStatus('运行中');
 
     const messageTemplates = [
