@@ -112,6 +112,25 @@ export function buildTimeline(records: SessionRecord[]): TimelineItem[] {
           tokens: totalTokensForMessage,
           raw: record._raw,
         });
+      } else if (role === 'toolResult') {
+        // Tool result message (OpenClaw format)
+        const textContent = content.find((c: any) => c.type === 'text');
+        const resultText = textContent ? (textContent as any).text : '';
+
+        items.push({
+          id: record.id,
+          type: 'toolResult',
+          timestamp,
+          content: {
+            tool_use_id: (record.message as any).toolCallId,
+            toolName: (record.message as any).toolName,
+            content: resultText,
+            status: (record.message as any).isError ? 'error' : 'success',
+            details: (record.message as any).details,
+          },
+          parentId: (record.message as any).toolCallId,
+          raw: record._raw,
+        });
       }
     } else if (record.type === 'tool_result' && record.result) {
       // Tool result

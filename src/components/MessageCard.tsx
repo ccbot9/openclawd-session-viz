@@ -43,7 +43,8 @@ export function MessageCard({ item }: MessageCardProps) {
       case 'user':
         return 'User';
       case 'toolResult':
-        return `Tool Result${content.status === 'error' ? ' (Error)' : ''}`;
+        const toolName = content.toolName ? `: ${content.toolName}` : '';
+        return `Tool Result${toolName}${content.status === 'error' ? ' (Error)' : ''}`;
       case 'assistant':
         return 'Assistant';
     }
@@ -57,17 +58,42 @@ export function MessageCard({ item }: MessageCardProps) {
     if (type === 'toolResult') {
       const resultContent = content.content;
       const isError = content.status === 'error';
+      const details = content.details;
 
       return (
-        <div className={`p-3 rounded border ${isError ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-          {isError && content.error && (
-            <p className="text-red-700 text-sm mb-2">Error: {content.error}</p>
+        <div className="space-y-2">
+          {/* Show execution details if available */}
+          {details && (
+            <div className="flex gap-4 text-xs text-gray-600">
+              {details.status && (
+                <span>
+                  <span className="font-semibold">Status:</span> {details.status}
+                </span>
+              )}
+              {details.exitCode !== undefined && (
+                <span>
+                  <span className="font-semibold">Exit Code:</span> {details.exitCode}
+                </span>
+              )}
+              {details.durationMs && (
+                <span>
+                  <span className="font-semibold">Duration:</span> {details.durationMs}ms
+                </span>
+              )}
+            </div>
           )}
-          <pre className="text-xs text-gray-700 overflow-x-auto max-h-40 overflow-y-auto scrollbar-thin">
-            {typeof resultContent === 'string'
-              ? resultContent
-              : JSON.stringify(resultContent, null, 2)}
-          </pre>
+
+          {/* Result content */}
+          <div className={`p-3 rounded border ${isError ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+            {isError && content.error && (
+              <p className="text-red-700 text-sm mb-2">Error: {content.error}</p>
+            )}
+            <pre className="text-xs text-gray-700 overflow-x-auto max-h-40 overflow-y-auto scrollbar-thin">
+              {typeof resultContent === 'string'
+                ? resultContent
+                : JSON.stringify(resultContent, null, 2)}
+            </pre>
+          </div>
         </div>
       );
     }
