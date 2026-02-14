@@ -115,6 +115,8 @@ app.get('/api/sessions/:id/config', (req, res) => {
       systemPromptChars: config.systemPromptReport?.systemPrompt?.chars || 0,
       workspaceFiles: config.systemPromptReport?.injectedWorkspaceFiles || [],
       verboseLevel: config.verboseLevel,
+      // Include full raw metadata
+      rawMetadata: config,
     });
   } catch (error) {
     console.error('Error reading session config:', error);

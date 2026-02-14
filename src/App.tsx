@@ -4,6 +4,7 @@ import { createSessionMetadata, buildTimeline } from './utils/sessionParser';
 import { SessionList } from './components/SessionList';
 import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
+import { MetadataView } from './components/MetadataView';
 import { FolderOpen, Search, RefreshCw, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 
 const API_URL = 'http://localhost:3001';
@@ -22,6 +23,7 @@ function App() {
   const [allSessionsInfo, setAllSessionsInfo] = useState<any[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
   const [matchedIndices, setMatchedIndices] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState<'timeline' | 'metadata'>('timeline');
 
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
@@ -402,13 +404,48 @@ function App() {
                 </div>
               </div>
 
-              {/* Timeline */}
-              <div className="flex-1 overflow-y-auto scrollbar-thin">
-                <Timeline
-                  items={filteredItems}
-                  highlightIndex={matchedIndices.length > 0 ? matchedIndices[currentMatchIndex] : -1}
-                  searchQuery={searchQuery}
-                />
+              {/* Tabs */}
+              <div className="bg-white border-b border-gray-200">
+                <div className="flex gap-4 px-6">
+                  <button
+                    onClick={() => setActiveTab('timeline')}
+                    className={`py-3 px-4 font-medium text-sm border-b-2 transition-colors ${
+                      activeTab === 'timeline'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Timeline
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('metadata')}
+                    className={`py-3 px-4 font-medium text-sm border-b-2 transition-colors ${
+                      activeTab === 'metadata'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Metadata
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-hidden">
+                {activeTab === 'timeline' ? (
+                  <div className="h-full overflow-y-auto scrollbar-thin">
+                    <Timeline
+                      items={filteredItems}
+                      highlightIndex={matchedIndices.length > 0 ? matchedIndices[currentMatchIndex] : -1}
+                      searchQuery={searchQuery}
+                    />
+                  </div>
+                ) : (
+                  <MetadataView
+                    config={selectedSession?.config || null}
+                    rawMetadata={selectedSession?.config?.rawMetadata}
+                  />
+                )}
               </div>
             </>
           )}

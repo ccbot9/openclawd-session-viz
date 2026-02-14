@@ -139,4 +139,5 @@ export interface SessionConfig {
   systemPromptChars?: number;
   workspaceFiles: WorkspaceFile[];
   verboseLevel?: string;
+  rawMetadata?: any;
 }
