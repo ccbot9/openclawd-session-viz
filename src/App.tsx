@@ -293,14 +293,17 @@ function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowCompactionViz(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              title="上下文压缩可视化"
-            >
-              <Eye size={18} />
-              <span>Compaction</span>
-            </button>
+            {/* 只有当 session 可能触发过压缩时才显示按钮（总 tokens >= 硬阈值 183,616） */}
+            {selectedSession && selectedSession.stats.totalTokens >= 183616 && (
+              <button
+                onClick={() => setShowCompactionViz(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                title="上下文压缩可视化"
+              >
+                <Eye size={18} />
+                <span>Compaction</span>
+              </button>
+            )}
 
             <button
               onClick={() => loadSessionsFromAPI(true)}
