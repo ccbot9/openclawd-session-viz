@@ -18,6 +18,7 @@ interface Message {
   tokens: number;
   timestamp: string;
   compacted: boolean;
+  cumulativeTokens: number; // 添加累计 tokens 字段
 }
 
 interface LogEntry {
@@ -59,18 +60,19 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms / speed));
 
   const addMessage = (content: string, messageTokens: number) => {
+    tokensRef.current += messageTokens;
+
     const message: Message = {
       id: ++messageIdCounter.current,
       content,
       tokens: messageTokens,
       timestamp: new Date().toISOString(),
       compacted: false,
+      cumulativeTokens: tokensRef.current, // 记录累计值
     };
 
     messagesRef.current = [...messagesRef.current, message];
     setMessages(messagesRef.current);
-
-    tokensRef.current += messageTokens;
     setTokens(tokensRef.current);
 
     addLog(`📨 新消息 #${message.id}：${content.substring(0, 30)}... (+${messageTokens} tokens)`);
@@ -125,7 +127,7 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
     const compactedCount = messagesRef.current.length - keptCount;
     const compactedTokens = tokensRef.current - keptTokens;
 
-    // Mark old messages as compacted
+    // Mark old messages as compacted (保持 cumulativeTokens)
     const updatedMessages = messagesRef.current.map((msg, i) => ({
       ...msg,
       compacted: i < compactedCount,
@@ -390,9 +392,10 @@ export function CompactionVisualizer({ sessionPath, onClose }: CompactionVisuali
                     key={msg.id}
                     className="flex-1 bg-gradient-to-t from-purple-600 to-indigo-600 rounded-t transition-all"
                     style={{
-                      height: `${Math.min(100, (tokens / CONFIG.contextWindow) * 100)}%`,
+                      height: `${Math.min(100, (msg.cumulativeTokens / CONFIG.contextWindow) * 100)}%`,
                       opacity: msg.compacted ? 0.3 : 1,
                     }}
+                    title={`#${msg.id}: ${msg.cumulativeTokens.toLocaleString()} tokens`}
                   />
                 ))}
               </div>
