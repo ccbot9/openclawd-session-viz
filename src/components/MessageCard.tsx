@@ -1,5 +1,6 @@
 import type { TimelineItem } from '../types/session';
 import { JsonViewer } from './JsonViewer';
+import { HighlightText } from './HighlightText';
 import { User, Brain, Wrench, CheckCircle, MessageSquare, AlertCircle, Settings, Zap, PlayCircle, Database } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
@@ -7,9 +8,10 @@ import ReactDiffViewer from 'react-diff-viewer-continued';
 
 interface MessageCardProps {
   item: TimelineItem;
+  searchQuery?: string;
 }
 
-export function MessageCard({ item }: MessageCardProps) {
+export function MessageCard({ item, searchQuery = '' }: MessageCardProps) {
   const { type, timestamp, content, tokens } = item;
 
   const getCardStyle = () => {
@@ -80,7 +82,11 @@ export function MessageCard({ item }: MessageCardProps) {
 
   const renderContent = () => {
     if (type === 'user') {
-      return <p className="text-gray-800 whitespace-pre-wrap">{content}</p>;
+      return (
+        <p className="text-gray-800 whitespace-pre-wrap">
+          <HighlightText text={content} searchQuery={searchQuery} />
+        </p>
+      );
     }
 
     if (type === 'toolResult') {
@@ -114,12 +120,15 @@ export function MessageCard({ item }: MessageCardProps) {
           {/* Result content */}
           <div className={`p-3 rounded border ${isError ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
             {isError && content.error && (
-              <p className="text-red-700 text-sm mb-2">Error: {content.error}</p>
+              <p className="text-red-700 text-sm mb-2">
+                Error: <HighlightText text={content.error} searchQuery={searchQuery} />
+              </p>
             )}
             <pre className="text-xs text-gray-700 overflow-x-auto max-h-40 overflow-y-auto scrollbar-thin">
-              {typeof resultContent === 'string'
-                ? resultContent
-                : JSON.stringify(resultContent, null, 2)}
+              <HighlightText
+                text={typeof resultContent === 'string' ? resultContent : JSON.stringify(resultContent, null, 2)}
+                searchQuery={searchQuery}
+              />
             </pre>
           </div>
         </div>
@@ -143,7 +152,9 @@ export function MessageCard({ item }: MessageCardProps) {
                 <span>Thinking (click to expand)</span>
               </summary>
               <div className="mt-2 p-3 bg-purple-50 rounded border border-purple-200">
-                <p className="text-gray-700 whitespace-pre-wrap text-sm">{thinking.thinking}</p>
+                <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                  <HighlightText text={thinking.thinking} searchQuery={searchQuery} />
+                </p>
               </div>
             </details>
           ))}
@@ -151,7 +162,7 @@ export function MessageCard({ item }: MessageCardProps) {
           {/* Text content */}
           {textItems.map((text: any, idx: number) => (
             <div key={`text-${idx}`} className="text-gray-800 whitespace-pre-wrap">
-              {text.text}
+              <HighlightText text={text.text} searchQuery={searchQuery} />
             </div>
           ))}
 

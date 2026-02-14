@@ -407,6 +407,7 @@ function App() {
                 <Timeline
                   items={filteredItems}
                   highlightIndex={matchedIndices.length > 0 ? matchedIndices[currentMatchIndex] : -1}
+                  searchQuery={searchQuery}
                 />
               </div>
             </>

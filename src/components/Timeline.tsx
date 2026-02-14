@@ -5,9 +5,10 @@ import { MessageCard } from './MessageCard';
 interface TimelineProps {
   items: TimelineItem[];
   highlightIndex?: number;
+  searchQuery?: string;
 }
 
-export function Timeline({ items, highlightIndex = -1 }: TimelineProps) {
+export function Timeline({ items, highlightIndex = -1, searchQuery = '' }: TimelineProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +50,7 @@ export function Timeline({ items, highlightIndex = -1 }: TimelineProps) {
             {index < items.length - 1 && (
               <div className="absolute left-6 top-full h-4 w-0.5 bg-gray-200 z-0" />
             )}
-            <MessageCard item={item} />
+            <MessageCard item={item} searchQuery={searchQuery} />
           </div>
         );
       })}
