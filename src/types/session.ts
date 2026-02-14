@@ -94,7 +94,7 @@ export interface SessionMetadata {
 
 export interface TimelineItem {
   id: string;
-  type: 'user' | 'assistant' | 'thinking' | 'toolCall' | 'toolResult';
+  type: 'user' | 'assistant' | 'thinking' | 'toolCall' | 'toolResult' | 'custom' | 'thinkingLevelChange' | 'modelChange' | 'sessionStart';
   timestamp: Date;
   content: any;
   tokens?: number;

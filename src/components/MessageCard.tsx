@@ -1,6 +1,6 @@
 import type { TimelineItem } from '../types/session';
 import { JsonViewer } from './JsonViewer';
-import { User, Brain, Wrench, CheckCircle, MessageSquare, AlertCircle } from 'lucide-react';
+import { User, Brain, Wrench, CheckCircle, MessageSquare, AlertCircle, Settings, Zap, PlayCircle, Database } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import ReactDiffViewer from 'react-diff-viewer-continued';
@@ -20,8 +20,16 @@ export function MessageCard({ item }: MessageCardProps) {
         return 'border-l-4 border-l-result bg-green-50';
       case 'assistant':
         return 'border-l-4 border-l-assistant bg-gray-50';
+      case 'custom':
+        return 'border-l-4 border-l-yellow-500 bg-yellow-50';
+      case 'thinkingLevelChange':
+        return 'border-l-4 border-l-purple-500 bg-purple-50';
+      case 'modelChange':
+        return 'border-l-4 border-l-indigo-500 bg-indigo-50';
+      case 'sessionStart':
+        return 'border-l-4 border-l-cyan-500 bg-cyan-50';
       default:
-        return '';
+        return 'border-l-4 border-l-gray-300 bg-gray-50';
     }
   };
 
@@ -35,6 +43,16 @@ export function MessageCard({ item }: MessageCardProps) {
           : <CheckCircle size={18} className="text-result" />;
       case 'assistant':
         return <MessageSquare size={18} className="text-assistant" />;
+      case 'custom':
+        return <Database size={18} className="text-yellow-600" />;
+      case 'thinkingLevelChange':
+        return <Brain size={18} className="text-purple-600" />;
+      case 'modelChange':
+        return <Zap size={18} className="text-indigo-600" />;
+      case 'sessionStart':
+        return <PlayCircle size={18} className="text-cyan-600" />;
+      default:
+        return <Settings size={18} className="text-gray-600" />;
     }
   };
 
@@ -47,6 +65,16 @@ export function MessageCard({ item }: MessageCardProps) {
         return `Tool Result${toolName}${content.status === 'error' ? ' (Error)' : ''}`;
       case 'assistant':
         return 'Assistant';
+      case 'custom':
+        return `Custom Event: ${content.customType || 'Unknown'}`;
+      case 'thinkingLevelChange':
+        return 'Thinking Level Change';
+      case 'modelChange':
+        return 'Model Change';
+      case 'sessionStart':
+        return 'Session Start';
+      default:
+        return 'Event';
     }
   };
 
@@ -214,6 +242,66 @@ export function MessageCard({ item }: MessageCardProps) {
               })}
             </div>
           )}
+        </div>
+      );
+    }
+
+    if (type === 'custom') {
+      return (
+        <div className="space-y-2">
+          <div className="text-sm font-semibold text-yellow-700">
+            {content.customType}
+          </div>
+          {content.data && (
+            <div className="bg-white p-3 rounded border border-yellow-200">
+              <pre className="text-xs text-gray-700 overflow-x-auto">
+                {JSON.stringify(content.data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (type === 'thinkingLevelChange') {
+      return (
+        <div className="space-y-2">
+          <div className="text-sm text-purple-700">
+            Changed thinking level to: <span className="font-semibold">{content.thinkingLevel}</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'modelChange') {
+      return (
+        <div className="space-y-2">
+          <div className="text-sm text-indigo-700">
+            <div>
+              <span className="font-semibold">Model:</span> {content.modelId}
+            </div>
+            {content.provider && (
+              <div className="mt-1">
+                <span className="font-semibold">Provider:</span> {content.provider}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'sessionStart') {
+      return (
+        <div className="space-y-2">
+          <div className="text-sm text-cyan-700">
+            <div className="font-semibold mb-2">Session Started</div>
+            {content.sessionId && (
+              <div className="text-xs">
+                <span className="font-semibold">Session ID:</span>{' '}
+                <code className="bg-white px-1 py-0.5 rounded">{content.sessionId}</code>
+              </div>
+            )}
+          </div>
         </div>
       );
     }
