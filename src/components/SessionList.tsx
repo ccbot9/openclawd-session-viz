@@ -1,14 +1,17 @@
 import type { SessionMetadata } from '../types/session';
 import { format, formatDistanceToNow } from 'date-fns';
-import { FileText, Calendar } from 'lucide-react';
+import { FileText, Calendar, ChevronDown } from 'lucide-react';
 
 interface SessionListProps {
   sessions: SessionMetadata[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loading?: boolean;
 }
 
-export function SessionList({ sessions, selectedId, onSelect }: SessionListProps) {
+export function SessionList({ sessions, selectedId, onSelect, onLoadMore, hasMore = false, loading = false }: SessionListProps) {
   // Group sessions by date (using modifiedAt instead of createdAt)
   const groupedSessions = sessions.reduce((acc, session) => {
     const dateKey = format(session.modifiedAt, 'yyyy-MM-dd');
@@ -41,63 +44,79 @@ export function SessionList({ sessions, selectedId, onSelect }: SessionListProps
   }
 
   return (
-    <div className="overflow-y-auto scrollbar-thin">
-      {sortedDates.map((dateKey) => (
-        <div key={dateKey} className="mb-4">
-          <div className="px-4 py-2 bg-gray-100 sticky top-0 z-10">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-              <Calendar size={12} />
-              <span>{getDateLabel(dateKey)}</span>
+    <div className="overflow-y-auto scrollbar-thin flex flex-col">
+      <div className="flex-1">
+        {sortedDates.map((dateKey) => (
+          <div key={dateKey} className="mb-4">
+            <div className="px-4 py-2 bg-gray-100 sticky top-0 z-10">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                <Calendar size={12} />
+                <span>{getDateLabel(dateKey)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1 px-2 py-1">
+              {groupedSessions[dateKey].map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => onSelect(session.id)}
+                  className={`w-full text-left p-3 rounded-lg transition-all ${
+                    selectedId === session.id
+                      ? 'bg-blue-50 border-2 border-blue-300'
+                      : 'hover:bg-gray-50 border-2 border-transparent'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-xs text-gray-500 truncate">
+                        {session.name}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {formatDistanceToNow(session.modifiedAt, { addSuffix: true })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-semibold text-gray-700">
+                        {session.stats.totalMessages} msg
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {session.stats.toolCalls} tools
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Token usage mini bar */}
+                  <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-400"
+                      style={{
+                        width: `${Math.min((session.stats.totalTokens / 100000) * 100, 100)}%`
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {(session.stats.totalTokens / 1000).toFixed(1)}K tokens
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
+        ))}
+      </div>
 
-          <div className="space-y-1 px-2 py-1">
-            {groupedSessions[dateKey].map((session) => (
-              <button
-                key={session.id}
-                onClick={() => onSelect(session.id)}
-                className={`w-full text-left p-3 rounded-lg transition-all ${
-                  selectedId === session.id
-                    ? 'bg-blue-50 border-2 border-blue-300'
-                    : 'hover:bg-gray-50 border-2 border-transparent'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-mono text-xs text-gray-500 truncate">
-                      {session.name}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {formatDistanceToNow(session.modifiedAt, { addSuffix: true })}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs font-semibold text-gray-700">
-                      {session.stats.totalMessages} msg
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {session.stats.toolCalls} tools
-                    </div>
-                  </div>
-                </div>
-
-                {/* Token usage mini bar */}
-                <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-400"
-                    style={{
-                      width: `${Math.min((session.stats.totalTokens / 100000) * 100, 100)}%`
-                    }}
-                  />
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {(session.stats.totalTokens / 1000).toFixed(1)}K tokens
-                </div>
-              </button>
-            ))}
-          </div>
+      {/* Load More Button */}
+      {hasMore && onLoadMore && (
+        <div className="p-4 border-t border-gray-200 bg-white sticky bottom-0">
+          <button
+            onClick={onLoadMore}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronDown size={16} className={loading ? 'animate-bounce' : ''} />
+            <span>{loading ? 'Loading...' : 'Load More (10)'}</span>
+          </button>
         </div>
-      ))}
+      )}
     </div>
   );
 }

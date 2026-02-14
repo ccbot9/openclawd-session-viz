@@ -16,11 +16,14 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionDir, setSessionDir] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [displayCount, setDisplayCount] = useState(10);
+  const [totalAvailable, setTotalAvailable] = useState(0);
+  const [allSessionsInfo, setAllSessionsInfo] = useState<any[]>([]);
 
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
   // Load sessions from API
-  const loadSessionsFromAPI = async () => {
+  const loadSessionsFromAPI = async (resetCount = true) => {
     setLoading(true);
     setError('');
     try {
@@ -45,8 +48,18 @@ function App() {
         return;
       }
 
-      // Load first 10 sessions (to avoid loading too much data at once)
-      const sessionsToLoad = data.sessions.slice(0, 10);
+      // Store all session info
+      setAllSessionsInfo(data.sessions);
+      setTotalAvailable(data.total || data.sessions.length);
+
+      // Reset display count on reload
+      if (resetCount) {
+        setDisplayCount(10);
+      }
+
+      // Load first displayCount sessions (sorted by modifiedAt on server)
+      const count = resetCount ? 10 : displayCount;
+      const sessionsToLoad = data.sessions.slice(0, count);
       const loadedSessions: SessionMetadata[] = [];
 
       for (const sessionInfo of sessionsToLoad) {
@@ -61,6 +74,8 @@ function App() {
         }
       }
 
+      // Sort by modifiedAt (descending) to match server order
+      loadedSessions.sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime());
       setSessions(loadedSessions);
 
       // Auto-select first session
@@ -69,6 +84,39 @@ function App() {
       }
     } catch (err: any) {
       setError(`Failed to connect to API: ${err.message}. Make sure the API server is running on port 3001.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load more sessions
+  const loadMoreSessions = async () => {
+    if (loading || sessions.length >= totalAvailable) return;
+
+    setLoading(true);
+    try {
+      const newCount = displayCount + 10;
+      const sessionsToLoad = allSessionsInfo.slice(sessions.length, newCount);
+      const newSessions: SessionMetadata[] = [];
+
+      for (const sessionInfo of sessionsToLoad) {
+        try {
+          const contentRes = await fetch(`${API_URL}/api/sessions/${sessionInfo.id}`);
+          const { content } = await contentRes.json();
+          const metadata = createSessionMetadata(sessionInfo.id, sessionInfo.path, content);
+          newSessions.push(metadata);
+        } catch (err) {
+          console.error(`Failed to load session ${sessionInfo.id}:`, err);
+        }
+      }
+
+      // Append and re-sort by modifiedAt
+      const allLoaded = [...sessions, ...newSessions];
+      allLoaded.sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime());
+      setSessions(allLoaded);
+      setDisplayCount(newCount);
+    } catch (err: any) {
+      setError(`Failed to load more sessions: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -193,6 +241,9 @@ function App() {
             sessions={sessions}
             selectedId={selectedSessionId}
             onSelect={setSelectedSessionId}
+            onLoadMore={loadMoreSessions}
+            hasMore={sessions.length < totalAvailable}
+            loading={loading}
           />
         </aside>
 
