@@ -136,7 +136,9 @@ function App() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">OpenClaw Session Visualizer</h1>
             <p className="text-sm text-gray-500 mt-1">
-              {sessionDir ? (
+              {selectedSession ? (
+                <span>📄 <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">{selectedSession.path}</code></span>
+              ) : sessionDir ? (
                 <span>📂 <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">{sessionDir}</code></span>
               ) : (
                 'Loading session directory...'
