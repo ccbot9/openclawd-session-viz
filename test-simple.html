@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+    <script type="module">
+        fetch('http://localhost:5173/src/App.tsx')
+            .then(r => r.text())
+            .then(t => console.log('App.tsx loads:', t.length > 0))
+            .catch(e => console.error('Error loading App.tsx:', e));
+    </script>
+</head>
+<body>
+    <h1>Testing...</h1>
+</body>
+</html>

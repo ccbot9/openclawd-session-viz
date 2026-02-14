@@ -1,0 +1,169 @@
+import { useState, useEffect } from 'react';
+import type { SessionMetadata, TimelineItem } from './types/session';
+import { createSessionMetadata, buildTimeline } from './utils/sessionParser';
+import { SessionList } from './components/SessionList';
+import { Timeline } from './components/Timeline';
+import { Inspector } from './components/Inspector';
+import { FolderOpen, Search } from 'lucide-react';
+
+function App() {
+  const [sessions, setSessions] = useState<SessionMetadata[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const selectedSession = sessions.find(s => s.id === selectedSessionId);
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    setLoading(true);
+    const newSessions: SessionMetadata[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.name.endsWith('.jsonl')) continue;
+
+      try {
+        const content = await file.text();
+        const sessionId = file.name.replace('.jsonl', '');
+        const metadata = createSessionMetadata(sessionId, file.name, content);
+        newSessions.push(metadata);
+      } catch (error) {
+        console.error(`Error parsing ${file.name}:`, error);
+      }
+    }
+
+    setSessions(prev => [...prev, ...newSessions]);
+    setLoading(false);
+
+    // Auto-select first session if none selected
+    if (!selectedSessionId && newSessions.length > 0) {
+      setSelectedSessionId(newSessions[0].id);
+    }
+  };
+
+  // Update timeline when session is selected
+  useEffect(() => {
+    if (selectedSession) {
+      const items = buildTimeline(selectedSession.records);
+      setTimelineItems(items);
+    } else {
+      setTimelineItems([]);
+    }
+  }, [selectedSession]);
+
+  // Filter timeline items by search query
+  const filteredItems = timelineItems.filter(item => {
+    if (!searchQuery) return true;
+
+    const query = searchQuery.toLowerCase();
+    const content = JSON.stringify(item.content).toLowerCase();
+    return content.includes(query) || item.type.toLowerCase().includes(query);
+  });
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">OpenClaw Session Visualizer</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Explore and analyze OpenClaw session execution
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+            <FolderOpen size={18} />
+            <span>Load Sessions</span>
+            <input
+              type="file"
+              multiple
+              accept=".jsonl"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </label>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar - Session List */}
+        <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-sm font-semibold text-gray-700 mb-3">Sessions</h2>
+            <div className="text-xs text-gray-500">
+              {sessions.length} session{sessions.length !== 1 ? 's' : ''} loaded
+            </div>
+          </div>
+
+          <SessionList
+            sessions={sessions}
+            selectedId={selectedSessionId}
+            onSelect={setSelectedSessionId}
+          />
+        </aside>
+
+        {/* Center - Timeline */}
+        <main className="flex-1 bg-gray-50 overflow-hidden flex flex-col">
+          {selectedSession && (
+            <>
+              {/* Search Bar */}
+              <div className="bg-white border-b border-gray-200 p-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search in timeline..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="flex-1 overflow-y-auto scrollbar-thin">
+                <Timeline items={filteredItems} />
+              </div>
+            </>
+          )}
+
+          {!selectedSession && !loading && (
+            <div className="flex-1 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <FolderOpen size={48} className="mx-auto mb-4 opacity-50" />
+                <p className="text-lg">No session selected</p>
+                <p className="text-sm mt-2">Load session files to get started</p>
+              </div>
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Loading sessions...</p>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Right Sidebar - Inspector */}
+        <aside className="w-96 bg-white border-l border-gray-200 overflow-y-auto scrollbar-thin">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-sm font-semibold text-gray-700">Inspector</h2>
+          </div>
+          <Inspector stats={selectedSession?.stats || null} />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+export default App;
