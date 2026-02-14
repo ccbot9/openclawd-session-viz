@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SessionMetadata, TimelineItem } from './types/session';
 import { createSessionMetadata, buildTimeline } from './utils/sessionParser';
 import { SessionList } from './components/SessionList';
 import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
-import { FolderOpen, Search, RefreshCw, Upload } from 'lucide-react';
+import { FolderOpen, Search, RefreshCw, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 
 const API_URL = 'http://localhost:3001';
 
@@ -19,6 +19,8 @@ function App() {
   const [displayCount, setDisplayCount] = useState(10);
   const [totalAvailable, setTotalAvailable] = useState(0);
   const [allSessionsInfo, setAllSessionsInfo] = useState<any[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+  const [matchedIndices, setMatchedIndices] = useState<number[]>([]);
 
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
@@ -193,14 +195,64 @@ function App() {
     }
   }, [selectedSession]);
 
-  // Filter timeline items by search query
-  const filteredItems = timelineItems.filter(item => {
-    if (!searchQuery) return true;
+  // Search logic - find all matching items
+  const searchMatches = React.useMemo(() => {
+    if (!searchQuery) {
+      setMatchedIndices([]);
+      setCurrentMatchIndex(-1);
+      return timelineItems;
+    }
 
     const query = searchQuery.toLowerCase();
-    const content = JSON.stringify(item.content).toLowerCase();
-    return content.includes(query) || item.type.toLowerCase().includes(query);
-  });
+    const matches: number[] = [];
+
+    timelineItems.forEach((item, index) => {
+      // Search in multiple fields
+      const searchableText = [
+        item.type,
+        typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
+        item.id,
+      ].join(' ').toLowerCase();
+
+      if (searchableText.includes(query)) {
+        matches.push(index);
+      }
+    });
+
+    return matches;
+  }, [timelineItems, searchQuery]);
+
+  // Update matched indices when search results change
+  React.useEffect(() => {
+    if (searchMatches.length > 0) {
+      setMatchedIndices(searchMatches);
+      // Default to last match
+      setCurrentMatchIndex(searchMatches.length - 1);
+    } else {
+      setMatchedIndices([]);
+      setCurrentMatchIndex(-1);
+    }
+  }, [searchMatches]);
+
+  // Navigate to previous match
+  const goToPrevMatch = () => {
+    if (matchedIndices.length === 0) return;
+    setCurrentMatchIndex((prev) => {
+      const newIndex = prev <= 0 ? matchedIndices.length - 1 : prev - 1;
+      return newIndex;
+    });
+  };
+
+  // Navigate to next match
+  const goToNextMatch = () => {
+    if (matchedIndices.length === 0) return;
+    setCurrentMatchIndex((prev) => {
+      const newIndex = prev >= matchedIndices.length - 1 ? 0 : prev + 1;
+      return newIndex;
+    });
+  };
+
+  const filteredItems = timelineItems;
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -278,21 +330,48 @@ function App() {
             <>
               {/* Search Bar */}
               <div className="bg-white border-b border-gray-200 p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    type="text"
-                    placeholder="Search in timeline..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="text"
+                      placeholder="Search in timeline..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {matchedIndices.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        {currentMatchIndex + 1} / {matchedIndices.length}
+                      </span>
+                      <button
+                        onClick={goToPrevMatch}
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
+                        title="Previous match (Shift+Enter)"
+                      >
+                        <ChevronUp size={16} />
+                      </button>
+                      <button
+                        onClick={goToNextMatch}
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
+                        title="Next match (Enter)"
+                      >
+                        <ChevronDown size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Timeline */}
               <div className="flex-1 overflow-y-auto scrollbar-thin">
-                <Timeline items={filteredItems} />
+                <Timeline
+                  items={filteredItems}
+                  highlightIndex={matchedIndices.length > 0 ? matchedIndices[currentMatchIndex] : -1}
+                />
               </div>
             </>
           )}
